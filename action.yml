@@ -1,9 +1,18 @@
 name: 'Slack Notify Build'
 description: 'Report GitHub Actions build status on Slack'
 inputs:
-  slack-webhook-url:
-    description: 'Slack webhook URL'
+  token:
+    description: 'Github token'
     required: true
+  run-id:
+    description: 'Run ID'
+    required: true
+  run-number:
+    description: 'Run number'
+    required: true
+outputs:
+  message:
+    description: 'Message payload'
 runs:
   using: 'node12'
   main: 'dist/index.js'
