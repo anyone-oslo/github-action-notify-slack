@@ -18385,7 +18385,7 @@ try {
         }
         fields.push({
           type: "mrkdwn",
-          text: statusIcon(j.conclusion) + " <" + j.html_url + "|" + j.name + ">\n  \u21b3 completed in " + dateDiff(new Date(j.started_at), new Date(j.completed_at))
+          text: statusIcon(j.conclusion) + " <" + j.html_url + "|" + j.name + "> completed in " + dateDiff(new Date(j.started_at), new Date(j.completed_at))
         });
       }
       if (wfSucceeded) {
@@ -18399,17 +18399,14 @@ try {
         text: `[${github.context.payload.repository.full_name}] ${statusLabel(wfStatus)}: ${github.context.workflow} run ${runNumber}`,
         blocks: [
           { type: "section",
-            text: {
-              type: "mrkdwn",
-              text: `<${github.context.payload.repository.url}|*${github.context.payload.repository.full_name}*>\nfrom *${github.context.ref}@` +
-                commit + "*"
-            }
-          },
-          { type: "section",
             text: { type: "mrkdwn",
-                    text: statusIcon(wfStatus) + ` *${github.context.workflow}* ` + pr +
-                    "\nWorkflow run <" + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
-                    dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) }
+                    text: statusIcon(wfStatus) +
+                    ` <${github.context.payload.repository.url}|*${github.context.payload.repository.full_name}*> ` +
+                    pr +
+                    "\n${github.context.workflow} <" + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
+                    dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) +
+                    `\nFrom *${github.context.ref}@${commit}`
+                  }
           },
           { type: "divider" },
           { type: "section", fields: fields }
