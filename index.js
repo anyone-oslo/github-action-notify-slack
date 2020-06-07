@@ -118,17 +118,18 @@ try {
         blocks: [
           { type: "section",
             text: { type: "mrkdwn",
-                    text: `${statusIcon(wfStatus)} *${statusLabel(wfStatus)}*` }},
+                    text: `${statusIcon(wfStatus)} *${statusLabel(wfStatus)}*: ` +
+                    `<${github.context.payload.repository.url}|*${github.context.payload.repository.full_name}*>`
+                  }},
           { type: "section",
             text: { type: "mrkdwn",
-                    text: `<${github.context.payload.repository.url}|*${github.context.payload.repository.full_name}*> - ` +
-                    `${github.context.workflow} <` + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
+                    text: `${github.context.workflow} <` + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
                     dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) +
                     ` (${branch}@<${github.context.payload.repository.url}/commit/${github.context.sha}|${commit}>)`+
                     pr
                   }
           },
-          { type: "divider" },
+          // { type: "divider" },
           { type: "section", fields: fields }
         ]});
     });
