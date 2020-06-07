@@ -18401,11 +18401,13 @@ try {
         blocks: [
           { type: "section",
             text: { type: "mrkdwn",
-                    text: `${statusIcon(wfStatus)} *${statusLabel(wfStatus)}*` +
-                    `\n${github.context.workflow} <` + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
+                    text: `${statusIcon(wfStatus)} *${statusLabel(wfStatus)}*` }},
+          { type: "section",
+            text: { type: "mrkdwn",
+                    text: `<${github.context.payload.repository.url}|*${github.context.payload.repository.full_name}*> - ` +
+                    `${github.context.workflow} <` + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
                     dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) +
-                    `\nIn <${github.context.payload.repository.url}|*${github.context.payload.repository.full_name}*> ` +
-                    `(*${branch} @ <${github.context.payload.repository.url}/commit/${github.context.sha}|${commit}>)`+
+                    ` (${branch}@<${github.context.payload.repository.url}/commit/${github.context.sha}|${commit}>)`+
                     pr
                   }
           },
