@@ -18359,6 +18359,7 @@ try {
     octokit.request(wfRun.data.jobs_url).then((jobs) => {
       const commit = github.context.sha.substr(0, 6);
       let wfStatus = "w_cancelled";
+      const branch = github.context.ref.split("/").reverse()[0];
 
       let pr = "";
       for (p of wfRun.data.pull_requests) {
@@ -18385,7 +18386,7 @@ try {
         }
         fields.push({
           type: "mrkdwn",
-          text: statusIcon(j.conclusion) + " <" + j.html_url + "|" + j.name + "> completed in " + dateDiff(new Date(j.started_at), new Date(j.completed_at))
+          text: statusIcon(j.conclusion) + " <" + j.html_url + "|*" + j.name + "*> (" + dateDiff(new Date(j.started_at), new Date(j.completed_at)) + ")"
         });
       }
       if (wfSucceeded) {
@@ -18400,12 +18401,12 @@ try {
         blocks: [
           { type: "section",
             text: { type: "mrkdwn",
-                    text: statusIcon(wfStatus) +
-                    ` <${github.context.payload.repository.url}|*${github.context.payload.repository.full_name}*> ` +
-                    pr +
-                    "\n${github.context.workflow} <" + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
+                    text: `${statusIcon(wfStatus)} *${statusLabel(wfStatus)}*` +
+                    `\n${github.context.workflow} <` + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
                     dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) +
-                    `\nFrom *${github.context.ref}@${commit}`
+                    `\nIn <${github.context.payload.repository.url}|*${github.context.payload.repository.full_name}*> ` +
+                    `(*${branch} @ <${github.context.payload.repository.url}/commit/${github.context.sha}|${commit}>)`+
+                    pr
                   }
           },
           { type: "divider" },
