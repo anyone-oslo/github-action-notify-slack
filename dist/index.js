@@ -18338,6 +18338,19 @@ try {
     }
   };
 
+  const statusLabel = function(s) {
+    switch (s) {
+    case "w_success":
+      return "Success";
+    case "w_failure":
+      return "Failure";
+    case "w_cancelled":
+      return "Cancelled";
+    default:
+      return "Unknown";
+    }
+  };
+
   octokit.actions.getWorkflowRun({
     owner: github.context.payload.repository.organization,
     repo: github.context.payload.repository.name,
@@ -18383,23 +18396,24 @@ try {
 
 
       core.setOutput("message", {
+        text: `[${github.context.payload.repository.full_name}] ${statusLabel(wfStatus)}: ${github.context.workflow} run ${runNumber}`,
         blocks: [
           { type: "section",
             text: {
               type: "mrkdwn",
               text: `<${github.context.payload.repository.url}|*${github.context.payload.repository.full_name}*>\nfrom *${github.context.ref}@` +
                 commit + "*"
-          }
-        },
-        { type: "section",
-          text: { type: "mrkdwn",
-                  text: statusIcon(wfStatus) + ` *${github.context.workflow}* ` + pr +
-                  "\nWorkflow run <" + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
-                  dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) }
-        },
-        { type: "divider" },
-        { type: "section", fields: fields }
-      ]});
+            }
+          },
+          { type: "section",
+            text: { type: "mrkdwn",
+                    text: statusIcon(wfStatus) + ` *${github.context.workflow}* ` + pr +
+                    "\nWorkflow run <" + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
+                    dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) }
+          },
+          { type: "divider" },
+          { type: "section", fields: fields }
+        ]});
     });
   });
 } catch (error) {
