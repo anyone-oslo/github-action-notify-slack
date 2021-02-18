@@ -75,7 +75,7 @@ try {
   }).then((wfRun) => {
     octokit.request(wfRun.data.jobs_url).then((jobs) => {
       const commit = github.context.sha.substr(0, 6);
-      let wfStatus = "w_cancelled";
+      let wfStatus = "w_success";
       const branch = github.context.ref.split("/").reverse()[0];
 
       let pr = "";
