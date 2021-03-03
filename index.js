@@ -116,21 +116,42 @@ try {
       core.setOutput("message", {
         text: `[${github.context.payload.repository.full_name}] ${statusLabel(wfStatus)}: ${github.context.workflow} run ${runNumber}`,
         blocks: [
+          { type: "header",
+            text: { type: "plain_text",
+                    text: github.context.payload.repository.full_name } },
           { type: "section",
             text: { type: "mrkdwn",
-                    text: `${statusIcon(wfStatus)} *${statusLabel(wfStatus)}*: ` +
-                    `<${github.context.payload.repository.url}|*${github.context.payload.repository.full_name}*>`
+                    text: `${statusIcon(wfStatus)} Build #${runNumber}: *<${wfRun.data.html_url}|${wfRun.data.name}>*`
                   }},
-          { type: "section",
-            text: { type: "mrkdwn",
-                    text: `${github.context.workflow} <` + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
-                    dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) +
-                    ` (${branch}@<${github.context.payload.repository.url}/commit/${github.context.sha}|${commit}>)`+
-                    pr
-                  }
-          },
-          // { type: "divider" },
-          { type: "section", fields: fields }
+          { type: "context",
+            elements: [
+              { type: "mrkdwn",
+                text: `Branch: *${branch}*` },
+              { type: "mrkdwn",
+                text: `Commit: *<${github.context.payload.repository.url}/commit/${github.context.sha}|${commit}>*` },
+              { type: "mrkdwn",
+                text: `*${jobs.data.jobs.length}* jobs` },
+              { type: "mrkdwn",
+                text: ":stopwatch: *" + dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) + "*" }
+            ]}
+
+
+
+          // { type: "section",
+          //   text: { type: "mrkdwn",
+          //           text: `${statusIcon(wfStatus)} *${statusLabel(wfStatus)}*: ` +
+          //           `<${github.context.payload.repository.url}|*${github.context.payload.repository.full_name}*>`
+          //         }},
+          // { type: "section",
+          //   text: { type: "mrkdwn",
+          //           text: `${github.context.workflow} <` + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
+          //           dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) +
+          //           ` (${branch}@<${github.context.payload.repository.url}/commit/${github.context.sha}|${commit}>)`+
+          //           pr
+          //         }
+          // },
+          // // { type: "divider" },
+          // { type: "section", fields: fields }
         ]});
     });
   });
