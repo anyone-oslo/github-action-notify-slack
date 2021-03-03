@@ -18357,7 +18357,7 @@ try {
     run_id: runId
   }).then((wfRun) => {
     octokit.request(wfRun.data.jobs_url).then((jobs) => {
-      const commit = github.context.sha.substr(0, 9);
+      const commit = github.context.sha.substr(0, 8);
       let wfStatus = "w_success";
       const branch = github.context.ref.split("/").reverse()[0];
 
