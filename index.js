@@ -49,7 +49,7 @@ try {
     case "success":
       return "\u2713";
     case "failure":
-      return "\u2717";
+      return ":exclamation:";
     default:
       return "\u20e0";
     }
@@ -87,7 +87,7 @@ try {
       }
 
       // build the message
-      let fields = [];
+      let failedJobs = [];
       var wfSucceeded = true;
       var wfFailed = false;
       for (j of jobs.data.jobs) {
@@ -100,11 +100,11 @@ try {
         }
         if (j.conclusion == "failure") {
           wfFailed = true;
+          failedJobs.push({
+            type: "mrkdwn",
+            text: statusIcon(j.conclusion) + " <" + j.html_url + "|*" + j.name + "*> (" + dateDiff(new Date(j.started_at), new Date(j.completed_at)) + ")"
+          });
         }
-        fields.push({
-          type: "mrkdwn",
-          text: statusIcon(j.conclusion) + " <" + j.html_url + "|*" + j.name + "*> (" + dateDiff(new Date(j.started_at), new Date(j.completed_at)) + ")"
-        });
       }
       if (wfSucceeded) {
         wfStatus = "w_success";
@@ -112,47 +112,43 @@ try {
         wfStatus = "w_failure";
       }
 
+      let blocks = [
+        { type: "header",
+          text: { type: "plain_text",
+                  text: github.context.payload.repository.full_name } },
+        { type: "section",
+          text: { type: "mrkdwn",
+                  text: `${statusIcon(wfStatus)} Build #${runNumber}: *<${wfRun.data.html_url}|${wfRun.data.head_commit.message}>*`
+                }},
+        { type: "context",
+          elements: [
+            { type: "mrkdwn",
+              text: `Branch: *${branch}*` },
+            { type: "mrkdwn",
+              text: `Commit: *<${github.context.payload.repository.url}/commit/${github.context.sha}|${commit}>*` },
+            { type: "mrkdwn",
+              text: `*${jobs.data.jobs.length}* jobs` },
+            { type: "mrkdwn",
+              text: ":stopwatch: *" + dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) + "*" }
+          ]}
+      ];
+
+      if (failedJobs.length > 0) {
+        blocks.push(
+          { "type": "header",
+            "text": {"type": "plain_text",
+	             "text": "Failed tasks",
+	             "emoji": true}}
+        );
+        blocks.push(
+          { "type": "section",
+            "fields": failedJobs }
+        );
+      }
 
       core.setOutput("message", {
         text: `[${github.context.payload.repository.full_name}] ${statusLabel(wfStatus)}: ${github.context.workflow} run ${runNumber}`,
-        blocks: [
-          { type: "header",
-            text: { type: "plain_text",
-                    text: github.context.payload.repository.full_name } },
-          { type: "section",
-            text: { type: "mrkdwn",
-                    text: `${statusIcon(wfStatus)} Build #${runNumber}: *<${wfRun.data.html_url}|${wfRun.data.head_commit.message}>*`
-                  }},
-          { type: "context",
-            elements: [
-              { type: "mrkdwn",
-                text: `Branch: *${branch}*` },
-              { type: "mrkdwn",
-                text: `Commit: *<${github.context.payload.repository.url}/commit/${github.context.sha}|${commit}>*` },
-              { type: "mrkdwn",
-                text: `*${jobs.data.jobs.length}* jobs` },
-              { type: "mrkdwn",
-                text: ":stopwatch: *" + dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) + "*" }
-            ]}
-
-
-
-          // { type: "section",
-          //   text: { type: "mrkdwn",
-          //           text: `${statusIcon(wfStatus)} *${statusLabel(wfStatus)}*: ` +
-          //           `<${github.context.payload.repository.url}|*${github.context.payload.repository.full_name}*>`
-          //         }},
-          // { type: "section",
-          //   text: { type: "mrkdwn",
-          //           text: `${github.context.workflow} <` + wfRun.data.html_url +  `|#${runNumber}> completed in ` +
-          //           dateDiff(new Date(wfRun.data.created_at), new Date(wfRun.data.updated_at)) +
-          //           ` (${branch}@<${github.context.payload.repository.url}/commit/${github.context.sha}|${commit}>)`+
-          //           pr
-          //         }
-          // },
-          // // { type: "divider" },
-          // { type: "section", fields: fields }
-        ]});
+        blocks: blocks});
     });
   });
 } catch (error) {
