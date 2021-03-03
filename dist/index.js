@@ -18404,7 +18404,7 @@ try {
                     text: github.context.payload.repository.full_name } },
           { type: "section",
             text: { type: "mrkdwn",
-                    text: `${statusIcon(wfStatus)} Build #${runNumber}: *<${wfRun.data.html_url}|${wfRun.data.name}>*`
+                    text: `${statusIcon(wfStatus)} Build #${runNumber}: *<${wfRun.data.html_url}|${wfRun.data.head_commit.message}>*`
                   }},
           { type: "context",
             elements: [
