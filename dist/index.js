@@ -18396,12 +18396,12 @@ try {
       }
 
       let blocks = [
-        { type: "header",
-          text: { type: "plain_text",
-                  text: github.context.payload.repository.full_name } },
         { type: "section",
           text: { type: "mrkdwn",
-                  text: `${statusIcon(wfStatus)} Build #${runNumber}: *<${wfRun.data.html_url}|${wfRun.data.head_commit.message}>*`
+                  text: `${github.context.payload.repository.full_name}` } },
+        { type: "section",
+          text: { type: "mrkdwn",
+                  text: `${statusIcon(wfStatus)} ${wfRn.data.name} #${runNumber}: *<${wfRun.data.html_url}|${wfRun.data.head_commit.message}>*`
                 }},
         { type: "context",
           elements: [
@@ -18418,11 +18418,11 @@ try {
 
       if (failedJobs.length > 0) {
         blocks.push(
-          { "type": "header",
-            "text": {"type": "plain_text",
-	             "text": "Failed tasks",
-	             "emoji": true}}
+          { "type": "section",
+            "text": {"type": "mrkdwn",
+	             "text": "*Failed tasks:*" }}
         );
+        blocks.push({ "type": "divider" });
         blocks.push(
           { "type": "section",
             "fields": failedJobs }
