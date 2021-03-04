@@ -118,7 +118,7 @@ try {
                   text: `${github.context.payload.repository.full_name}` } },
         { type: "section",
           text: { type: "mrkdwn",
-                  text: `${statusIcon(wfStatus)} ${wfRn.data.name} #${runNumber}: *<${wfRun.data.html_url}|${wfRun.data.head_commit.message}>*`
+                  text: `${statusIcon(wfStatus)} ${wfRun.data.name} #${runNumber}: *<${wfRun.data.html_url}|${wfRun.data.head_commit.message}>*`
                 }},
         { type: "context",
           elements: [
