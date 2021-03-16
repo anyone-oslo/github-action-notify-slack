@@ -18395,13 +18395,15 @@ try {
         wfStatus = "w_failure";
       }
 
+      let message = wfRun.data.head_commit.message.split("\n")[0];
+
       let blocks = [
         { type: "section",
           text: { type: "mrkdwn",
                   text: `*${github.context.payload.repository.full_name}*` } },
         { type: "section",
           text: { type: "mrkdwn",
-                  text: `${statusIcon(wfStatus)} <${wfRun.data.html_url}|${wfRun.data.name} #${runNumber}>: *${wfRun.data.head_commit.message}*`
+                  text: `${statusIcon(wfStatus)} <${wfRun.data.html_url}|${wfRun.data.name} #${runNumber}>: *${message}*`
                 }},
         { type: "context",
           elements: [
