@@ -12,7 +12,7 @@ try {
   const token = core.getInput("token");
   const runId = core.getInput("run-id");
   const runNumber = core.getInput("run-number");
-  const octokit = new github.GitHub(token);
+  const octokit = new github.getOctokit(token);
 
   const dateDiff = function (start, end) {
     var duration = end - start;
@@ -70,7 +70,7 @@ try {
     }
   };
 
-  octokit.actions
+  octokit.rest.actions
     .getWorkflowRun({
       owner: github.context.payload.repository.organization,
       repo: github.context.payload.repository.name,
