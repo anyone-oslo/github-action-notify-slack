@@ -3,7 +3,7 @@ module.exports = {
     es2021: true,
     node: true
   },
-  extends: ["eslint:recommended", "plugin:react/recommended", "prettier"],
+  extends: ["eslint:recommended", "prettier"],
   overrides: [
     {
       files: ["**/*.+(ts|tsx)"],
@@ -26,10 +26,5 @@ module.exports = {
     "linebreak-style": ["error", "unix"],
     quotes: ["error", "double", { avoidEscape: true }],
     semi: ["error", "always"]
-  },
-  settings: {
-    react: {
-      version: "detect"
-    }
   }
 };
