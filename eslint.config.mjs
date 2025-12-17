@@ -23,9 +23,12 @@ export default [
       semi: ["error", "always"],
     },
   },
+  ...tseslint.configs.recommendedTypeChecked.map((config) => ({
+    ...config,
+    files: ["**/*.ts", "**/*.tsx"],
+  })),
   {
     files: ["**/*.ts", "**/*.tsx"],
-    extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
         projectService: true,

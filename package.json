@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "lint": "eslint 'index.js'",
-    "build": "ncc build index.js",
-    "prettier": "prettier index.js --check",
-    "prettier:fix": "prettier index.js --write"
+    "lint": "eslint 'index.ts'",
+    "build": "ncc build index.ts",
+    "prettier": "prettier index.ts --check",
+    "prettier:fix": "prettier index.ts --write"
   },
   "repository": {
     "type": "git",
