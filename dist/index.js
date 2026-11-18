@@ -37439,17 +37439,21 @@ const workflowStatus = function (jobs) {
     }
     return "w_success";
 };
-const failedJobText = function (job) {
+const failedJobText = function (job, workflow) {
     const jobUrl = job.html_url ?? "";
-    const steps = (job.steps ?? [])
-        .filter((s) => failedConclusions.includes(s.conclusion ?? ""))
-        .map((s) => `<${jobUrl}#step:${s.number}:1|${s.name}>`);
+    const name = job.name.replace(`${workflow} / `, "");
+    const steps = (job.steps ?? []).filter((s) => failedConclusions.includes(s.conclusion ?? ""));
     const duration = dateDiff(new Date(job.started_at), new Date(job.completed_at ?? ""));
-    const name = `:exclamation: <${jobUrl}|*${job.name}*>`;
-    if (steps.length > 0) {
-        return `${name} › ${steps.join(", ")} (${duration})`;
+    const stepUrl = (s) => `${jobUrl}#step:${s.number}:1`;
+    if (steps.length === 1 && name.endsWith(steps[0].name)) {
+        return `:exclamation: <${stepUrl(steps[0])}|*${name}*> (${duration})`;
     }
-    return `${name} (${duration})`;
+    const label = `:exclamation: <${jobUrl}|*${name}*>`;
+    if (steps.length > 0) {
+        const links = steps.map((s) => `<${stepUrl(s)}|${s.name}>`).join(", ");
+        return `${label} › ${links} (${duration})`;
+    }
+    return `${label} (${duration})`;
 };
 async function run() {
     try {
@@ -37468,7 +37472,7 @@ async function run() {
         const wfStatus = workflowStatus(jobs);
         const failedJobs = jobs
             .filter((j) => failedConclusions.includes(j.conclusion ?? ""))
-            .map((j) => ({ type: "mrkdwn", text: failedJobText(j) }));
+            .map((j) => failedJobText(j, wfRun.data.name ?? ""));
         const commit = github_context.sha.slice(0, 8);
         const branch = github_context.ref.replace("refs/heads/", "");
         const message = index_escape(wfRun.data.head_commit?.message.split("\n")[0] ?? "");
@@ -37508,7 +37512,10 @@ async function run() {
                 text: { type: "mrkdwn", text: "*Failed tasks:*" }
             });
             blocks.push({ type: "divider" });
-            blocks.push({ type: "section", fields: failedJobs });
+            blocks.push({
+                type: "section",
+                text: { type: "mrkdwn", text: failedJobs.join("\n") }
+            });
         }
         const output = {
             text: `[${repository?.full_name ?? ""}] ${statusLabel(wfStatus)}: ${github_context.workflow} run ${runNumber}`,
