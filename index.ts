@@ -3,14 +3,16 @@ import * as github from "@actions/github";
 
 type WorkflowStatus = "w_success" | "w_failure" | "w_cancelled";
 
+interface SlackText {
+  type: string;
+  text: string;
+}
+
 interface SlackBlock {
   type: string;
-  text?: {
-    type: string;
-    text: string;
-  };
-  elements?: Array<{ type: string; text: string }>;
-  fields?: Array<{ type: string; text: string }>;
+  text?: SlackText;
+  elements?: SlackText[];
+  fields?: SlackText[];
 }
 
 interface SlackMessage {
@@ -18,25 +20,29 @@ interface SlackMessage {
   blocks: SlackBlock[];
 }
 
+interface Step {
+  name: string;
+  number: number;
+  conclusion: string | null;
+}
+
 interface Job {
   status: string;
   conclusion: string | null;
-  html_url: string;
+  html_url: string | null;
   name: string;
   started_at: string;
   completed_at: string | null;
+  steps?: Step[];
 }
 
-interface JobsResponse {
-  data: {
-    jobs: Job[];
-  };
-}
+const failedConclusions = ["failure", "timed_out"];
+
+const escape = (text: string): string =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const dateDiff = function (start: Date, end: Date): string {
-  const duration = end.getTime() - start.getTime();
-  // format the duration
-  let delta = duration / 1000;
+  let delta = (end.getTime() - start.getTime()) / 1000;
   const days = Math.floor(delta / 86400);
   delta -= days * 86400;
   const hours = Math.floor(delta / 3600) % 24;
@@ -44,26 +50,17 @@ const dateDiff = function (start: Date, end: Date): string {
   const minutes = Math.floor(delta / 60) % 60;
   delta -= minutes * 60;
   const seconds = Math.floor(delta % 60);
-  const formatFunc = function (
-    v: number,
-    text: string,
-    check: boolean
-  ): string {
-    if (v <= 0 && check) {
-      return "";
-    } else {
-      return v + text;
-    }
-  };
+  const format = (v: number, unit: string, omitZero: boolean): string =>
+    v <= 0 && omitZero ? "" : `${v}${unit}`;
   return (
-    formatFunc(days, "d", true) +
-    formatFunc(hours, "h", true) +
-    formatFunc(minutes, "m", true) +
-    formatFunc(seconds, "s", false)
+    format(days, "d", true) +
+    format(hours, "h", true) +
+    format(minutes, "m", true) +
+    format(seconds, "s", false)
   );
 };
 
-const statusIcon = function (s: string): string {
+const statusIcon = function (s: WorkflowStatus): string {
   switch (s) {
     case "w_success":
       return ":white_check_mark:";
@@ -71,12 +68,6 @@ const statusIcon = function (s: string): string {
       return ":no_entry:";
     case "w_cancelled":
       return ":warning:";
-    case "success":
-      return "\u2713";
-    case "failure":
-      return ":exclamation:";
-    default:
-      return "\u20e0";
   }
 };
 
@@ -88,95 +79,74 @@ const statusLabel = function (s: WorkflowStatus): string {
       return "Failure";
     case "w_cancelled":
       return "Cancelled";
-    default:
-      return "Unknown";
   }
+};
+
+const workflowStatus = function (jobs: Job[]): WorkflowStatus {
+  const conclusions = jobs.map((j) => j.conclusion);
+  if (conclusions.some((c) => failedConclusions.includes(c ?? ""))) {
+    return "w_failure";
+  }
+  if (conclusions.includes("cancelled")) {
+    return "w_cancelled";
+  }
+  return "w_success";
+};
+
+const failedJobText = function (job: Job): string {
+  const jobUrl = job.html_url ?? "";
+  const steps = (job.steps ?? [])
+    .filter((s) => failedConclusions.includes(s.conclusion ?? ""))
+    .map((s) => `<${jobUrl}#step:${s.number}:1|${s.name}>`);
+  const duration = dateDiff(
+    new Date(job.started_at),
+    new Date(job.completed_at ?? "")
+  );
+  const name = `:exclamation: <${jobUrl}|*${job.name}*>`;
+  if (steps.length > 0) {
+    return `${name} › ${steps.join(", ")} (${duration})`;
+  }
+  return `${name} (${duration})`;
 };
 
 async function run(): Promise<void> {
   try {
-    // const slackWebhookUrl = core.getInput('slack-webhook-url');
-    // console.log(`Webhook URL ${slackWebhookUrl}!`);
-
-    // Get the JSON webhook payload for the event that triggered
-    // the workflow
-    // const payload = JSON.stringify(
-    //   github.context.payload,
-    //   undefined,
-    //   2
-    // );
-    // console.log(`The event payload: ${payload}`);
-
     const token = core.getInput("token");
-    const runId = core.getInput("run-id");
+    const runId = parseInt(core.getInput("run-id"));
     const runNumber = core.getInput("run-number");
     const octokit = github.getOctokit(token);
+    const { owner, repo } = github.context.repo;
 
     const wfRun = await octokit.rest.actions.getWorkflowRun({
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
-      run_id: parseInt(runId)
+      owner,
+      repo,
+      run_id: runId
     });
 
-    const jobs = (await octokit.request(wfRun.data.jobs_url)) as JobsResponse;
+    const allJobs: Job[] = await octokit.paginate(
+      octokit.rest.actions.listJobsForWorkflowRun,
+      { owner, repo, run_id: runId, per_page: 100 }
+    );
+    const jobs = allJobs.filter(
+      (j) => j.status === "completed" && j.conclusion !== "skipped"
+    );
 
-    const commit = github.context.sha.substr(0, 8);
-    let wfStatus: WorkflowStatus = "w_success";
-    const branch = github.context.ref.split("/").reverse()[0];
+    const wfStatus = workflowStatus(jobs);
+    const failedJobs = jobs
+      .filter((j) => failedConclusions.includes(j.conclusion ?? ""))
+      .map((j) => ({ type: "mrkdwn", text: failedJobText(j) }));
 
-    let pr = "";
-    if (wfRun.data.pull_requests) {
-      for (const p of wfRun.data.pull_requests) {
-        pr += ",<" + p.url + "|#" + p.number + ">";
-      }
-      if (pr !== "") {
-        pr = "for " + pr.substr(1);
-      }
-    }
-
-    // build the message
-    const failedJobs: Array<{ type: string; text: string }> = [];
-    let wfSucceeded = true;
-    let wfFailed = false;
-    for (const j of jobs.data.jobs) {
-      // ignore the current job running this script
-      if (j.status !== "completed") {
-        continue;
-      }
-      if (j.conclusion !== "success") {
-        wfSucceeded = false;
-      }
-      if (j.conclusion === "failure") {
-        wfFailed = true;
-        failedJobs.push({
-          type: "mrkdwn",
-          text:
-            statusIcon(j.conclusion ?? "") +
-            " <" +
-            j.html_url +
-            "|*" +
-            j.name +
-            "*> (" +
-            dateDiff(new Date(j.started_at), new Date(j.completed_at ?? "")) +
-            ")"
-        });
-      }
-    }
-    if (wfSucceeded) {
-      wfStatus = "w_success";
-    } else if (wfFailed) {
-      wfStatus = "w_failure";
-    }
-
-    const message = wfRun.data.head_commit?.message.split("\n")[0] ?? "";
+    const commit = github.context.sha.slice(0, 8);
+    const branch = github.context.ref.replace("refs/heads/", "");
+    const message = escape(
+      wfRun.data.head_commit?.message.split("\n")[0] ?? ""
+    );
+    const repository = github.context.payload.repository;
 
     const blocks: SlackBlock[] = [
       {
         type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*${github.context.payload.repository?.full_name ?? ""}*`
-        }
+        text: { type: "mrkdwn", text: `*${repository?.full_name ?? ""}*` }
       },
       {
         type: "section",
@@ -193,13 +163,9 @@ async function run(): Promise<void> {
           { type: "mrkdwn", text: `Branch: *${branch}*` },
           {
             type: "mrkdwn",
-            text: `Commit: *<${
-              github.context.payload.repository?.url ?? ""
-            }/commit/${github.context.sha}|${commit}>*`
-          },
-          {
-            type: "mrkdwn",
-            text: `*${jobs.data.jobs.length}* jobs`
+            text: `Commit: *<${repository?.html_url ?? ""}/commit/${
+              github.context.sha
+            }|${commit}>*`
           },
           {
             type: "mrkdwn",
@@ -225,9 +191,9 @@ async function run(): Promise<void> {
     }
 
     const output: SlackMessage = {
-      text: `[${
-        github.context.payload.repository?.full_name ?? ""
-      }] ${statusLabel(wfStatus)}: ${github.context.workflow} run ${runNumber}`,
+      text: `[${repository?.full_name ?? ""}] ${statusLabel(wfStatus)}: ${
+        github.context.workflow
+      } run ${runNumber}`,
       blocks: blocks
     };
 

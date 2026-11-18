@@ -1,0 +1,34 @@
+---
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6.0.9
+        with:
+          run_install: true
+      - name: ESLint
+        run: pnpm lint
+      - name: Prettier
+        if: ${{ !cancelled() }}
+        run: pnpm prettier
+      - name: TypeScript
+        if: ${{ !cancelled() }}
+        run: pnpm exec tsc --noEmit
+      - name: Build
+        if: ${{ !cancelled() }}
+        run: pnpm build
+      - name: Check dist is up to date
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code dist/
+      - name: Check dist bundles all modules
+        if: ${{ !cancelled() }}
+        run: "! grep -q webpackMissingModule dist/index.js"
